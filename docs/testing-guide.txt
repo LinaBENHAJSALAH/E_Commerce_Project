@@ -1,0 +1,374 @@
+================================================================================
+  E-COMMERCE BLOCKCHAIN PLATFORM — TESTING GUIDE
+================================================================================
+  Project: Angular + Spring Boot + Sepolia (Ethereum Testnet)
+  Last Updated: May 2026
+================================================================================
+
+
+================================================================================
+  PREREQUISITES
+================================================================================
+
+  Before testing, ensure the following are running / installed:
+
+  1. Spring Boot backend → http://localhost:8080
+     Command: mvn spring-boot:run (from spring-boot-ecommerce/)
+
+  2. Angular frontend   → http://localhost:4200
+     Command: ng serve (from angular-ecommerce/)
+
+  3. MetaMask browser extension installed
+     - Configured with Sepolia testnet
+     - Funded with test ETH (use https://sepoliafaucet.com)
+
+  4. MySQL database running (for order persistence)
+
+
+================================================================================
+  TEST SCENARIO 1 — SHOPPING CART
+================================================================================
+
+  Objective: Verify cart add/remove/update and localStorage persistence.
+
+  Steps:
+  -------
+  1. Navigate to http://localhost:4200/products
+  2. Click "Add to Cart" on any product
+  3. Verify the cart badge in the header increments
+  4. Click the cart icon → navigate to /cart
+  5. Verify the item appears with correct name, price, and quantity = 1
+  6. Click "+" to increment quantity → verify subtotal updates
+  7. Click "-" to decrement quantity → verify subtotal updates
+  8. Click "-" when quantity = 1 → item should be removed
+  9. Add multiple different products
+  10. Refresh the page (F5)
+  11. Verify cart items are restored from localStorage
+
+  Expected Results:
+  ------------------
+  - Cart badge shows correct total quantity
+  - Prices and subtotals calculate correctly
+  - Cart survives page refresh (localStorage key: "ecommerce_cart")
+
+  Verification:
+  -------------
+  Open browser DevTools → Application → Local Storage → localhost:4200
+  Look for key: "ecommerce_cart"
+  Value should be a JSON array of cart items.
+
+
+================================================================================
+  TEST SCENARIO 2 — METAMASK CONNECTION
+================================================================================
+
+  Objective: Verify MetaMask wallet connects and switches to Sepolia.
+
+  Steps:
+  -------
+  1. Add items to cart and navigate to /checkout
+  2. Enter customer name and email, then click "Continue"
+  3. Click "Connect MetaMask"
+  4. MetaMask popup should appear — approve the connection
+  5. If not on Sepolia, MetaMask will prompt to switch networks — approve
+  6. Verify wallet address is displayed (shortened: 0x1234...abcd)
+  7. Verify ETH balance is shown
+
+  Expected Results:
+  ------------------
+  - Wallet address appears on screen
+  - Network is Sepolia (chain ID: 0xaa36a7 / 11155111)
+  - Balance displays in ETH
+
+  Common Errors:
+  ---------------
+  - "MetaMask is not installed" → Install MetaMask extension
+  - "Connection rejected by user" → User clicked Cancel in MetaMask popup
+  - "Failed to switch to Sepolia testnet" → Manually add Sepolia:
+      Network Name: Sepolia Testnet
+      RPC URL: https://rpc.sepolia.org
+      Chain ID: 11155111
+      Currency: ETH
+      Explorer: https://sepolia.etherscan.io
+
+
+================================================================================
+  TEST SCENARIO 3 — CRYPTO PAYMENT (SEPOLIA)
+================================================================================
+
+  Objective: Verify ETH payment flow on Sepolia testnet.
+
+  Steps:
+  -------
+  1. Complete Scenario 1 (items in cart) and Scenario 2 (wallet connected)
+  2. On the payment step, verify the ETH amount is shown
+     Formula: ETH = USD total / 2000 (fixed rate)
+  3. Click "Pay with Crypto"
+  4. MetaMask popup shows the transaction — verify:
+     - Recipient address: 0x742d35Cc6634C0532925a3b844Bc9e7595f5bA16
+     - Amount matches the displayed ETH value
+     - Network is Sepolia
+  5. Click "Confirm" in MetaMask
+  6. Wait for transaction to be mined (1 confirmation)
+  7. Verify transaction hash is displayed on screen
+
+  Expected Results:
+  ------------------
+  - Transaction hash appears (0x...)
+  - Order is automatically submitted to backend
+  - Success message with order ID is shown
+  - Cart is cleared after successful order
+
+  Verifying on Etherscan:
+  ------------------------
+  1. Copy the transaction hash displayed on screen
+  2. Go to: https://sepolia.etherscan.io/tx/<PASTE_TX_HASH>
+  3. Verify:
+     - Status: Success
+     - From: your wallet address
+     - To: 0x742d35Cc6634C0532925a3b844Bc9e7595f5bA16
+     - Value: matches the ETH amount shown at checkout
+  4. Block confirmations should be >= 1
+
+  Common Errors:
+  ---------------
+  - "Insufficient funds" → Get test ETH from https://sepoliafaucet.com
+  - "Transaction rejected by user" → User clicked Reject in MetaMask
+  - Transaction pending too long → Sepolia may be congested; wait or retry
+  - "Transaction failed — no receipt received" → Network issue; check Etherscan
+
+
+================================================================================
+  TEST SCENARIO 4 — BACKEND ORDER (POST /api/orders)
+================================================================================
+
+  Objective: Verify order creation and persistence in the database.
+
+  Steps:
+  -------
+  1. Complete a full payment (Scenario 3)
+  2. The order is submitted automatically after payment confirmation
+  3. Verify the success message shows an order ID
+
+  Manual API Test (without frontend):
+  ------------------------------------
+  Use Postman, curl, or any HTTP client:
+
+  POST http://localhost:8080/api/orders
+  Content-Type: application/json
+
+  {
+    "customerName": "Test User",
+    "customerEmail": "test@example.com",
+    "walletAddress": "0xYourWalletAddress",
+    "totalPrice": 35.99,
+    "transactionHash": "0xUNIQUE_TX_HASH_HERE",
+    "items": [
+      {
+        "productId": "BOOK-001",
+        "productName": "Clean Code",
+        "unitPrice": 35.99,
+        "quantity": 1,
+        "imageUrl": ""
+      }
+    ]
+  }
+
+  Expected Response (200 OK):
+  ----------------------------
+  {
+    "orderId": 1,
+    "status": "CONFIRMED",
+    "message": "Order created successfully"
+  }
+
+  Verify in Database:
+  --------------------
+  SELECT * FROM orders ORDER BY id DESC LIMIT 1;
+  SELECT * FROM order_items WHERE order_id = <ORDER_ID>;
+
+
+================================================================================
+  TEST SCENARIO 5 — FRAUD PROTECTION TESTS
+================================================================================
+
+  These tests verify backend security against common attack vectors.
+
+  --------------------
+  5A. DUPLICATE TRANSACTION HASH
+  --------------------
+
+  Objective: Ensure the same TX hash cannot be used for two orders.
+
+  Steps:
+  1. Submit an order with a transaction hash (use Scenario 4 API test)
+  2. Copy the exact same payload and submit again
+  3. The second request MUST be rejected
+
+  Expected Response (400 Bad Request):
+  {
+    "message": "Transaction hash already used for another order"
+  }
+
+  curl Example:
+  -------------
+  # First request (should succeed):
+  curl -X POST http://localhost:8080/api/orders \
+    -H "Content-Type: application/json" \
+    -d '{
+      "customerName": "Test",
+      "customerEmail": "test@test.com",
+      "walletAddress": "0x0000000000000000000000000000000000000000",
+      "totalPrice": 35.99,
+      "transactionHash": "0xDUPLICATE_TEST_HASH_001",
+      "items": [{"productId":"BOOK-001","productName":"Book","unitPrice":35.99,"quantity":1,"imageUrl":""}]
+    }'
+
+  # Second request (should fail with 400):
+  curl -X POST http://localhost:8080/api/orders \
+    -H "Content-Type: application/json" \
+    -d '{
+      "customerName": "Test",
+      "customerEmail": "test@test.com",
+      "walletAddress": "0x0000000000000000000000000000000000000000",
+      "totalPrice": 35.99,
+      "transactionHash": "0xDUPLICATE_TEST_HASH_001",
+      "items": [{"productId":"BOOK-001","productName":"Book","unitPrice":35.99,"quantity":1,"imageUrl":""}]
+    }'
+
+  --------------------
+  5B. WRONG AMOUNT (TOTAL MISMATCH)
+  --------------------
+
+  Objective: Ensure the backend rejects orders where totalPrice does not
+  match the sum of (unitPrice × quantity) for all items.
+
+  Steps:
+  1. Submit an order where totalPrice is inflated (e.g., 999.99)
+     but items only add up to 35.99
+  2. The backend MUST reject this with a validation error
+
+  curl Example:
+  -------------
+  curl -X POST http://localhost:8080/api/orders \
+    -H "Content-Type: application/json" \
+    -d '{
+      "customerName": "Fraud Test",
+      "customerEmail": "fraud@test.com",
+      "walletAddress": "0x0000000000000000000000000000000000000000",
+      "totalPrice": 999.99,
+      "transactionHash": "0xFAKE_WRONG_AMOUNT_TEST",
+      "items": [{"productId":"BOOK-001","productName":"Book","unitPrice":35.99,"quantity":1,"imageUrl":""}]
+    }'
+
+  Expected Response (400 Bad Request):
+  {
+    "message": "Total price does not match item sum"
+  }
+
+
+================================================================================
+  ETHERSCAN VERIFICATION REFERENCE
+================================================================================
+
+  Sepolia Etherscan: https://sepolia.etherscan.io
+
+  How to verify a transaction:
+  1. Go to https://sepolia.etherscan.io/tx/<TX_HASH>
+  2. Check these fields:
+     - Status       → "Success" (green checkmark)
+     - Block        → confirmed block number
+     - From         → your MetaMask wallet address
+     - To           → 0x742d35Cc6634C0532925a3b844Bc9e7595f5bA16
+     - Value        → ETH amount sent
+     - Gas Used     → transaction gas cost
+
+  How to verify a wallet:
+  1. Go to https://sepolia.etherscan.io/address/<WALLET_ADDRESS>
+  2. View all transactions sent/received
+  3. Check current ETH balance
+
+  Getting Test ETH:
+  - https://sepoliafaucet.com (requires Alchemy account)
+  - https://www.infura.io/faucet/sepolia
+  - https://sepolia-faucet.pk910.de (PoW faucet, no account needed)
+
+
+================================================================================
+  COMMON ERRORS & DEBUGGING TIPS
+================================================================================
+
+  FRONTEND ERRORS
+  ----------------
+  Error: "MetaMask is not installed"
+  Fix:   Install MetaMask browser extension from https://metamask.io
+
+  Error: "Connection rejected by user"
+  Fix:   Click "Connect" (not "Cancel") in the MetaMask popup
+
+  Error: "Insufficient funds for gas"
+  Fix:   Get test ETH from a Sepolia faucet (see links above)
+
+  Error: Cart is empty after adding items
+  Fix:   Check browser console for localStorage errors;
+         ensure cookies/storage are not blocked
+
+  Error: ETH amount shows 0.000000
+  Fix:   Cart total may be $0; verify items are added correctly
+
+  BACKEND ERRORS
+  ----------------
+  Error: 404 on POST /api/orders
+  Fix:   Ensure Spring Boot is running on port 8080;
+         check application.properties for correct port
+
+  Error: 500 Internal Server Error
+  Fix:   Check Spring Boot console logs;
+         common cause: database connection failure
+
+  Error: "Transaction hash already used"
+  Fix:   This is expected fraud protection — each TX hash is unique;
+         use a new transaction for each order
+
+  Error: CORS error in browser console
+  Fix:   Verify Spring Boot has @CrossOrigin configured on the
+         OrderController, or add a global CORS config
+
+  METAMASK / NETWORK ERRORS
+  --------------------------
+  Error: Wrong network / not on Sepolia
+  Fix:   The app auto-switches; if it fails, manually select Sepolia
+         in MetaMask: Settings → Networks → Sepolia Test Network
+
+  Error: Transaction stuck "pending"
+  Fix:   In MetaMask → Activity → click the pending TX → Speed Up
+         or Cancel and retry
+
+  Error: "Nonce too high" or "Nonce too low"
+  Fix:   MetaMask → Settings → Advanced → Reset Account
+         (clears local TX history, does NOT lose funds)
+
+
+================================================================================
+  QUICK TEST CHECKLIST (for presentation)
+================================================================================
+
+  [ ] 1. Products load on /products page
+  [ ] 2. Add 2-3 items to cart
+  [ ] 3. Cart badge updates in header
+  [ ] 4. Navigate to /cart — items displayed correctly
+  [ ] 5. Increment/decrement quantity works
+  [ ] 6. Refresh page — cart persists (localStorage)
+  [ ] 7. Click Checkout — enter name + email
+  [ ] 8. Connect MetaMask — wallet address shown
+  [ ] 9. Pay with Crypto — MetaMask popup appears
+  [ ] 10. Confirm TX — wait for confirmation
+  [ ] 11. Order ID displayed — success message shown
+  [ ] 12. Verify TX on Sepolia Etherscan
+  [ ] 13. Cart is cleared after order
+  [ ] 14. Test duplicate TX hash → backend rejects (400)
+  [ ] 15. Test wrong amount → backend rejects (400)
+
+================================================================================
+  END OF TESTING GUIDE
+================================================================================
