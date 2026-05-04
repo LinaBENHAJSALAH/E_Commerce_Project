@@ -4,15 +4,17 @@
           <div class="row">
                 <!-- Product List -->
                   <div *ngFor="let tempProduct of products" class="col-md-3">
-                    <div class="align-middle">
+                    <div class="align-middle product-box">
                         <img src="{{ tempProduct.imageUrl }}"  class="img-responsive" >
-                          <h1>{{ tempProduct.name }}</h1>
-                          <div class="align-middle">{{ tempProduct.unitPrice | currency:'USD' }}</div>
-                          <a href="#" class="primary-btn">Add to Cart</a>
+                          <h5>{{ tempProduct.name }}</h5>
+                          <div class="price">{{ tempProduct.unitPrice | currency:'USD' }}</div>
+                          <button class="primary-btn" (click)="addToCart(tempProduct)">
+                            <i class="fas fa-cart-plus"></i> Add to Cart
+                          </button>
                     </div>
 
                   </div> 
           </div>
     </div>
   </div>
-</div>
+</div>

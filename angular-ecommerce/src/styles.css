@@ -739,23 +739,81 @@ table.table.table-bordered th{
     background-color:#0da8e4!important;
     border-color:#0da8e4!important
 }
-a.primary-btn{
+a.primary-btn,
+button.primary-btn{
     background:#05143f;
     padding:7px 20px;
     text-align:center;
     display:inline-block;
     color:#fff;
-    border-radius:2px;
+    border-radius:4px;
     font-size:14px;
-    margin-top:5px
+    margin-top:5px;
+    border:none;
+    cursor:pointer;
+    transition:all .3s ease
 }
-a.primary-btn:hover{
+a.primary-btn:hover,
+button.primary-btn:hover{
     background:#0da8e4;
-    color:#fff
+    color:#fff;
+    transform:translateY(-1px);
+    box-shadow:0 3px 10px rgba(13,168,228,.3)
+}
+button.primary-btn i{
+    margin-right:6px
 }
 
 .active-link {
   font-weight: bold;
+}
+
+/* Cart Link in Navbar */
+.cart-link{
+    text-decoration:none;
+    display:flex;
+    align-items:center
+}
+.cart-link:hover .total{
+    background:#0d6eaa;
+    border-color:#0da8e4
+}
+
+/* Animated Cart Badge */
+.cart-badge{
+    display:inline-block;
+    background:#fff;
+    padding:0 13px;
+    color:#000;
+    border-top-right-radius:20px;
+    border-bottom-right-radius:20px;
+    margin-left:11px;
+    font-weight:700;
+    transition:transform .3s ease
+}
+
+/* Product Box Enhancements */
+.product-box{
+    margin-bottom:30px;
+    padding:15px;
+    background:#fff;
+    border-radius:8px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+    transition:all .3s ease;
+    text-align:center
+}
+.product-box:hover{
+    transform:translateY(-4px);
+    box-shadow:0 8px 25px rgba(0,0,0,.1)
+}
+.product-box img{
+    width:150px;
+    margin-bottom:10px
+}
+.product-box h5{
+    font-size:14px;
+    margin-bottom:5px;
+    min-height:36px
 }
 
 /* 

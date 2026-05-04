@@ -2,24 +2,29 @@
   <!-- MENU SIDEBAR-->
 	<aside class="menu-sidebar d-none d-lg-block">
 			<div class="logo">
-				<a href="home.html">
-					<img src="assets/images/logo.png" alt="luv2shop" class="img-responsive">
+				<a routerLink="/products">
+					<img src="assets/images/logo.png" alt="shopping" class="img-responsive">
 				</a>
 			</div>
 			<div class="menu-sidebar-content js-scrollbar1">
 				<nav class="navbar-sidebar">
 					<ul class="list-unstyled navbar-list">
 						<li>
-							<a href="#">Books</a>
+							<a routerLink="/products" routerLinkActive="active-link">Books</a>
 						</li>
 						<li>
-							<a href="#">Coffee Mugs</a>
+							<a routerLink="/products" routerLinkActive="active-link">Coffee Mugs</a>
 						</li>
 						<li>
-							<a href="#">Mouse Pads</a>
+							<a routerLink="/products" routerLinkActive="active-link">Mouse Pads</a>
 						</li>
 						<li>
-							<a href="#">Luggage Tags</a>
+							<a routerLink="/products" routerLinkActive="active-link">Luggage Tags</a>
+						</li>
+						<li class="demo-nav-item">
+							<a routerLink="/demo" routerLinkActive="active-link">
+								<i class="fas fa-flask"></i> Demo &amp; Test
+							</a>
 						</li>
 					</ul>
 				</nav>
@@ -41,12 +46,20 @@
 									Search
 								</button>
 							</form>
+
+							<!-- Dynamic Cart Badge (bound to CartService) -->
 							<div class="cart-area d-n">
-								<a href="shopping-detail.html">
-									<div class="total">19.22 <span> 2</span> </div> <i class="fa fa-shopping-cart"
-										aria-hidden="true"></i>
+								<a routerLink="/cart" class="cart-link">
+									<div class="total">
+										{{ totalPrice$ | async | currency:'USD' }}
+										<span class="cart-badge">
+											{{ totalQuantity$ | async }}
+										</span>
+									</div>
+									<i class="fas fa-shopping-cart" aria-hidden="true"></i>
 								</a>
 							</div>
+
 						</div>
 						<div class="account-wrap"></div>
 					</div>
@@ -54,11 +67,9 @@
 			</header>
 			<!-- END HEADER DESKTOP-->
 
-			<!-- MAIN CONTENT-->
-        
-  			<app-product-list></app-product-list>
-		
-              <!-- END MAIN CONTENT-->
+			<!-- MAIN CONTENT (Router Outlet) -->
+			<router-outlet></router-outlet>
+			<!-- END MAIN CONTENT-->
 
   </div>
     <!-- END PAGE CONTAINER-->

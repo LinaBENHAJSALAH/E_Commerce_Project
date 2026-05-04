@@ -1,0 +1,156 @@
+<div class="main-content">
+  <div class="section-content section-content-p30">
+    <div class="container-fluid">
+      <div class="checkout-page">
+
+        <!-- Header with Steps -->
+        <div class="checkout-header">
+          <h2><i class="fas fa-lock"></i> Secure Checkout</h2>
+          <div class="step-indicator">
+            <div class="step" [class.active]="currentStep >= 1" [class.done]="currentStep > 1">
+              <span class="step-num">1</span><span class="step-label">Review</span>
+            </div>
+            <div class="step-line" [class.active]="currentStep > 1"></div>
+            <div class="step" [class.active]="currentStep >= 2" [class.done]="currentStep > 2">
+              <span class="step-num">2</span><span class="step-label">Wallet</span>
+            </div>
+            <div class="step-line" [class.active]="currentStep > 2"></div>
+            <div class="step" [class.active]="currentStep >= 3" [class.done]="currentStep > 3">
+              <span class="step-num">3</span><span class="step-label">Pay</span>
+            </div>
+            <div class="step-line" [class.active]="currentStep > 3"></div>
+            <div class="step" [class.active]="currentStep >= 4">
+              <span class="step-num">4</span><span class="step-label">Done</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div *ngIf="errorMessage" class="alert alert-danger checkout-alert">
+          <i class="fas fa-exclamation-circle"></i> {{ errorMessage }}
+        </div>
+        <div *ngIf="successMessage" class="alert alert-success checkout-alert">
+          <i class="fas fa-check-circle"></i> {{ successMessage }}
+        </div>
+
+        <!-- STEP 1: Review -->
+        <div *ngIf="currentStep === 1" class="checkout-step">
+          <div class="row">
+            <div class="col-md-7">
+              <div class="checkout-card">
+                <h4><i class="fas fa-shopping-bag"></i> Order Summary</h4>
+                <div *ngFor="let item of cartItems" class="order-item-row">
+                  <img [src]="item.imageUrl" [alt]="item.name" class="order-item-img">
+                  <div class="order-item-info">
+                    <span class="order-item-name">{{ item.name }}</span>
+                    <span class="order-item-qty">Qty: {{ item.quantity }}</span>
+                  </div>
+                  <span class="order-item-price">{{ item.subTotal | currency:'USD' }}</span>
+                </div>
+                <div class="order-total-line">
+                  <strong>Total:</strong>
+                  <strong class="order-total-value">{{ totalPrice | currency:'USD' }}</strong>
+                </div>
+                <div class="order-eth-line">
+                  ≈ {{ ethAmount | number:'1.6-6' }} ETH
+                  <span class="eth-rate">(1 ETH = ${{ ethUsdRate }})</span>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-5">
+              <div class="checkout-card">
+                <h4><i class="fas fa-user"></i> Your Information</h4>
+                <div class="checkout-form-group">
+                  <label for="customerName">Full Name</label>
+                  <input type="text" id="customerName" class="form-control checkout-input"
+                         [(ngModel)]="customerName" placeholder="Enter your full name">
+                </div>
+                <div class="checkout-form-group">
+                  <label for="customerEmail">Email Address</label>
+                  <input type="email" id="customerEmail" class="form-control checkout-input"
+                         [(ngModel)]="customerEmail" placeholder="Enter your email">
+                </div>
+                <button class="btn-checkout-next" (click)="proceedToConnect()">
+                  Continue to Payment <i class="fas fa-arrow-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Connect Wallet -->
+        <div *ngIf="currentStep === 2" class="checkout-step">
+          <div class="checkout-card checkout-card-center">
+            <div *ngIf="!isMetaMaskInstalled" class="metamask-warning">
+              <i class="fas fa-exclamation-triangle"></i>
+              <h4>MetaMask Required</h4>
+              <p>Install MetaMask wallet extension for crypto payment.</p>
+              <a href="https://metamask.io/download/" target="_blank" class="btn-install-metamask">
+                <i class="fas fa-download"></i> Install MetaMask
+              </a>
+            </div>
+            <div *ngIf="isMetaMaskInstalled">
+              <div class="wallet-icon"><i class="fas fa-wallet"></i></div>
+              <h4>Connect Your Wallet</h4>
+              <p>Connect MetaMask to pay with ETH on Sepolia testnet.</p>
+              <div class="checkout-summary-mini">
+                <span>Amount:</span>
+                <strong>{{ totalPrice | currency:'USD' }} ≈ {{ ethAmount | number:'1.6-6' }} ETH</strong>
+              </div>
+              <button class="btn-connect-wallet" (click)="connectWallet()" [disabled]="isProcessing">
+                <span *ngIf="!isProcessing"><i class="fab fa-ethereum"></i> Connect MetaMask</span>
+                <span *ngIf="isProcessing"><i class="fas fa-spinner fa-spin"></i> Connecting...</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Pay -->
+        <div *ngIf="currentStep === 3" class="checkout-step">
+          <div class="checkout-card checkout-card-center">
+            <div class="wallet-status-badge connected">
+              <i class="fas fa-check-circle"></i> Wallet Connected
+            </div>
+            <div class="wallet-details">
+              <div class="wallet-detail-row"><span>Address:</span> <code>{{ shortenAddress(walletAddress) }}</code></div>
+              <div class="wallet-detail-row"><span>Balance:</span> <code>{{ walletBalance | number:'1.4-4' }} ETH</code></div>
+              <div class="wallet-detail-row"><span>Network:</span> <code>Sepolia Testnet</code></div>
+            </div>
+            <hr class="checkout-divider">
+            <h4><i class="fab fa-ethereum"></i> Payment Details</h4>
+            <div class="payment-row"><span>Order Total:</span> <strong>{{ totalPrice | currency:'USD' }}</strong></div>
+            <div class="payment-row"><span>ETH Amount:</span> <strong>{{ ethAmount | number:'1.6-6' }} ETH</strong></div>
+            <button class="btn-pay-crypto" (click)="payWithCrypto()" [disabled]="isProcessing">
+              <span *ngIf="!isProcessing"><i class="fab fa-ethereum"></i> Pay {{ ethAmount | number:'1.6-6' }} ETH</span>
+              <span *ngIf="isProcessing"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
+            </button>
+            <p class="payment-note"><i class="fas fa-info-circle"></i> MetaMask will prompt you to confirm.</p>
+          </div>
+        </div>
+
+        <!-- STEP 4: Done -->
+        <div *ngIf="currentStep === 4" class="checkout-step">
+          <div class="checkout-card checkout-card-center">
+            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+            <h3>Payment Successful!</h3>
+            <p>Your order has been placed and verified on the blockchain.</p>
+            <div class="tx-result-box">
+              <div class="tx-row">
+                <span>TX Hash:</span>
+                <a [href]="'https://sepolia.etherscan.io/tx/' + transactionHash" target="_blank" class="tx-link">
+                  {{ shortenAddress(transactionHash) }} <i class="fas fa-external-link-alt"></i>
+                </a>
+              </div>
+              <div class="tx-row"><span>Paid:</span> <strong>{{ ethAmount | number:'1.6-6' }} ETH</strong></div>
+              <div class="tx-row"><span>Status:</span> <span class="tx-confirmed"><i class="fas fa-check"></i> Confirmed</span></div>
+            </div>
+            <button class="btn-continue-shopping" (click)="continueShopping()">
+              <i class="fas fa-shopping-bag"></i> Continue Shopping
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
